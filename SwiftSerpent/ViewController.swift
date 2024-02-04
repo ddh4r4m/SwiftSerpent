@@ -17,10 +17,17 @@ class ViewController: UIViewController {
     var currentDirection: CGPoint = CGPoint(x: 0, y: -1) // Initially moving upwards
     var isGamePaused = false
     var pauseButton: UIButton!
+    var score = 0
+    var highScore = 0
+    var scoreLabel: UILabel!
+    var highScoreLabel: UILabel!
+
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        highScore = UserDefaults.standard.integer(forKey: "highScore")
         setupGameView()
+        setupScoreLabels()
         setupControls()
         startGame()
     }
@@ -36,6 +43,8 @@ class ViewController: UIViewController {
 extension ViewController {
     
     func startGame() {
+        score = 0
+            updateScoreLabels()
         snakeBody = [CGPoint(x: gridSize / 2, y: gridSize / 2)]
         generateFood()
         gameTimer = Timer.scheduledTimer(timeInterval: 0.25, target: self, selector: #selector(gameLoop), userInfo: nil, repeats: true)
@@ -95,6 +104,12 @@ extension ViewController {
         snakeBody.insert(newHead, at: 0)
         
         if newHead == foodPoint {
+            score += 1 // Increase score
+
+            if score > highScore {
+                        highScore = score
+                        UserDefaults.standard.set(highScore, forKey: "highScore")
+                    }
             generateFood() // Increase the snake length and generate new food
         } else {
             snakeBody.removeLast() // Move the snake by removing the tail
@@ -137,7 +152,7 @@ extension ViewController {
         let yOffset = gameView.frame.maxY + padding
 
         // Directions: Up, Down, Left, Right
-        let directions = ["Up", "Down", "Left", "Right"]
+        let directions = ["Right", "Down", "Left", "Up"]
         let circleRadius: CGFloat = 100 / 2
         let center = view.center
 
@@ -173,7 +188,7 @@ extension ViewController {
 
     @objc func changeDirection(_ sender: UIButton) {
         switch sender.tag {
-        case 0: // Up
+        case 3: // Up
             if currentDirection != CGPoint(x: 0, y: 1) { // Prevent moving directly opposite
                 currentDirection = CGPoint(x: 0, y: -1)
             }
@@ -185,12 +200,31 @@ extension ViewController {
             if currentDirection != CGPoint(x: 1, y: 0) {
                 currentDirection = CGPoint(x: -1, y: 0)
             }
-        case 3: // Right
+        case 0: // Right
             if currentDirection != CGPoint(x: -1, y: 0) {
                 currentDirection = CGPoint(x: 1, y: 0)
             }
         default: break
         }
+    }
+}
+
+extension ViewController{
+    func setupScoreLabels() {
+        scoreLabel = UILabel(frame: CGRect(x: 20, y: 120, width: 200, height: 20))
+        scoreLabel.textColor = .white
+        view.addSubview(scoreLabel)
+        
+        highScoreLabel = UILabel(frame: CGRect(x: 20, y: 160, width: 200, height: 20))
+        highScoreLabel.textColor = .white
+        view.addSubview(highScoreLabel)
+        
+        updateScoreLabels()
+    }
+
+    func updateScoreLabels() {
+        scoreLabel.text = "Score: \(score)"
+        highScoreLabel.text = "High Score: \(highScore)"
     }
 }
 

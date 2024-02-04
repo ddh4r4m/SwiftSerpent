@@ -21,6 +21,10 @@ class ViewController: UIViewController {
     var highScore = 0
     var scoreLabel: UILabel!
     var highScoreLabel: UILabel!
+    var currentLevel = 1
+    var targetScoreForNextLevel = 1 // Example target score to reach the next level
+    var obstacles: [CGPoint] = []
+
 
 
     override func viewDidLoad() {
@@ -29,7 +33,32 @@ class ViewController: UIViewController {
         setupGameView()
         setupScoreLabels()
         setupControls()
+        setupPauseButton()
         startGame()
+        adNotificationObservers()
+    }
+    
+    func adNotificationObservers() {
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(pauseGame), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(resumeGameIfNeeded), name: UIApplication.willEnterForegroundNotification, object: nil)
+    }
+    
+    @objc func pauseGame() {
+        if !isGamePaused {
+            togglePauseGame()
+        }
+    }
+
+    @objc func resumeGameIfNeeded() {
+        // Optional: Check a condition if the game was paused by the user manually and should not be resumed automatically
+        if isGamePaused {
+            togglePauseGame()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func setupGameView() {
@@ -81,6 +110,7 @@ extension ViewController {
         moveSnake()
         checkForCollision()
         drawGame()
+        checkLevelAdvance()
     }
 
     func moveSnake() {
@@ -105,12 +135,12 @@ extension ViewController {
         
         if newHead == foodPoint {
             score += 1 // Increase score
-
             if score > highScore {
-                        highScore = score
-                        UserDefaults.standard.set(highScore, forKey: "highScore")
-                    }
+                highScore = score
+                UserDefaults.standard.set(highScore, forKey: "highScore")
+            }
             generateFood() // Increase the snake length and generate new food
+            updateScoreLabels()
         } else {
             snakeBody.removeLast() // Move the snake by removing the tail
         }
@@ -173,12 +203,11 @@ extension ViewController {
             button.addTarget(self, action: #selector(changeDirection(_:)), for: .touchUpInside)
             view.addSubview(button)
         }
-        setupPauseButton()
     }
     
     func setupPauseButton() {
         let buttonSize: CGFloat = 50
-        let pauseButton = UIButton(frame: CGRect(x: view.center.x - buttonSize / 2, y: view.center.y * 1.7 - buttonSize / 2, width: buttonSize, height: buttonSize))
+        pauseButton = UIButton(frame: CGRect(x: view.center.x - buttonSize / 2, y: view.center.y * 1.7 - buttonSize / 2, width: buttonSize, height: buttonSize))
         pauseButton.backgroundColor = .systemRed
         pauseButton.setTitle("Pause", for: .normal)
         pauseButton.addTarget(self, action: #selector(togglePauseGame), for: .touchUpInside)
@@ -226,6 +255,60 @@ extension ViewController{
         scoreLabel.text = "Score: \(score)"
         highScoreLabel.text = "High Score: \(highScore)"
     }
+}
+
+extension ViewController {
+
+    func checkLevelAdvance() {
+        if score >= targetScoreForNextLevel {
+            advanceToNextLevel()
+        }
+    }
+
+    func advanceToNextLevel() {
+        currentLevel += 1
+        score = 0 // Optionally reset score or keep accumulating
+        targetScoreForNextLevel += 2 // Adjust based on your leveling system
+        increaseDifficulty()
+        
+        // Reset or adjust game state as needed for new level
+        // For example, increase speed:
+        gameTimer?.invalidate()
+        gameTimer = Timer.scheduledTimer(timeInterval: calculateNewTimeInterval(), target: self, selector: #selector(gameLoop), userInfo: nil, repeats: true)
+    }
+
+    func calculateNewTimeInterval() -> TimeInterval {
+        // Example logic to increase speed: reduce the timer interval
+        // Adjust the decrement value to suit your game's difficulty curve
+        max(0.05, 0.25 - (TimeInterval(currentLevel - 1) * 0.02))
+    }
+
+    func generateObstacles() {
+        obstacles.removeAll()
+        // Generate new obstacles based on current level
+        let numberOfObstacles = currentLevel * 2 // Example: increase obstacle count with level
+        for _ in 0..<numberOfObstacles {
+            var obstaclePoint: CGPoint
+            repeat {
+                obstaclePoint = CGPoint(x: Int.random(in: 0..<gridSize), y: Int.random(in: 0..<gridSize))
+            } while snakeBody.contains(obstaclePoint) || obstaclePoint == foodPoint // Avoid placing on the snake or food
+            obstacles.append(obstaclePoint)
+        }
+    }
+
+    func drawObstacles() {
+        for obstacle in obstacles {
+            let obstacleView = UIView(frame: CGRect(x: obstacle.x * CGFloat(gridSize), y: obstacle.y * CGFloat(gridSize), width: CGFloat(gridSize), height: CGFloat(gridSize)))
+            obstacleView.backgroundColor = .yellow // Choose a color that stands out
+            gameView.addSubview(obstacleView)
+        }
+    }
+    
+    func increaseDifficulty() {
+        generateObstacles()
+        drawObstacles()
+    }
+
 }
 
 extension Timer {

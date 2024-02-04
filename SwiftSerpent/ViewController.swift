@@ -15,6 +15,8 @@ class ViewController: UIViewController {
     var snakeBody = [CGPoint]()
     var foodPoint = CGPoint.zero
     var currentDirection: CGPoint = CGPoint(x: 0, y: -1) // Initially moving upwards
+    var isGamePaused = false
+    var pauseButton: UIButton!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -37,6 +39,20 @@ extension ViewController {
         snakeBody = [CGPoint(x: gridSize / 2, y: gridSize / 2)]
         generateFood()
         gameTimer = Timer.scheduledTimer(timeInterval: 0.25, target: self, selector: #selector(gameLoop), userInfo: nil, repeats: true)
+    }
+    
+    @objc func togglePauseGame() {
+        if isGamePaused {
+            // Resume game
+            gameTimer?.resumeTimer()
+            isGamePaused = false
+            pauseButton.setTitle("Pause", for: .normal) // Change text to "Pause"
+        } else {
+            // Pause game
+            gameTimer?.pauseTimer()
+            isGamePaused = true
+            pauseButton.setTitle("Resume", for: .normal) // Change text to "Resume"
+        }
     }
 
     func generateFood() {
@@ -122,15 +138,38 @@ extension ViewController {
 
         // Directions: Up, Down, Left, Right
         let directions = ["Up", "Down", "Left", "Right"]
+        let circleRadius: CGFloat = 100 / 2
+        let center = view.center
+
         for (index, direction) in directions.enumerated() {
-            let button = UIButton(frame: CGRect(x: CGFloat(index) * (buttonSize + padding) + padding, y: yOffset, width: buttonSize, height: buttonSize))
+            let angle: CGFloat = CGFloat(index) * (2.0 * .pi / CGFloat(directions.count))
+            
+            // Break down the calculation of buttonX and buttonY into smaller steps
+            let offsetX: CGFloat = circleRadius * cos(angle)
+            let offsetY: CGFloat = circleRadius * sin(angle)
+            let buttonX: CGFloat = center.x + offsetX - (buttonSize / 2)
+            let buttonY: CGFloat = center.y * 1.7 + offsetY - (buttonSize / 2)
+            
+            let buttonFrame = CGRect(x: buttonX, y: buttonY, width: buttonSize, height: buttonSize)
+            let button = UIButton(frame: buttonFrame)
             button.backgroundColor = .systemBlue
             button.setTitle(direction, for: .normal)
             button.tag = index
             button.addTarget(self, action: #selector(changeDirection(_:)), for: .touchUpInside)
             view.addSubview(button)
         }
+        setupPauseButton()
     }
+    
+    func setupPauseButton() {
+        let buttonSize: CGFloat = 50
+        let pauseButton = UIButton(frame: CGRect(x: view.center.x - buttonSize / 2, y: view.center.y * 1.7 - buttonSize / 2, width: buttonSize, height: buttonSize))
+        pauseButton.backgroundColor = .systemRed
+        pauseButton.setTitle("Pause", for: .normal)
+        pauseButton.addTarget(self, action: #selector(togglePauseGame), for: .touchUpInside)
+        view.addSubview(pauseButton)
+    }
+
 
     @objc func changeDirection(_ sender: UIButton) {
         switch sender.tag {
@@ -152,5 +191,15 @@ extension ViewController {
             }
         default: break
         }
+    }
+}
+
+extension Timer {
+    func pauseTimer() {
+        self.fireDate = Date.distantFuture
+    }
+
+    func resumeTimer() {
+        self.fireDate = Date()
     }
 }

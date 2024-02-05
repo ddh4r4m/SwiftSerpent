@@ -9,7 +9,7 @@ import UIKit
 
 class ViewController: UIViewController {
     
-    var gameView: UIView!
+    var gameView: UIView = UIView()
     let gridSize = 20
     var gameTimer: Timer?
     var snakeBody = [CGPoint]()
@@ -24,9 +24,9 @@ class ViewController: UIViewController {
     var currentLevel = 1
     var targetScoreForNextLevel = 1 // Example target score to reach the next level
     var obstacles: [CGPoint] = []
-
-
-
+    
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         highScore = UserDefaults.standard.integer(forKey: "highScore")
@@ -39,7 +39,6 @@ class ViewController: UIViewController {
     }
     
     func adNotificationObservers() {
-        
         NotificationCenter.default.addObserver(self, selector: #selector(pauseGame), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(resumeGameIfNeeded), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
@@ -49,7 +48,7 @@ class ViewController: UIViewController {
             togglePauseGame()
         }
     }
-
+    
     @objc func resumeGameIfNeeded() {
         // Optional: Check a condition if the game was paused by the user manually and should not be resumed automatically
         if isGamePaused {
@@ -60,12 +59,20 @@ class ViewController: UIViewController {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-
+    
     func setupGameView() {
-        let gameViewSize = view.bounds.width - 40 // Padding from edges
-        gameView = UIView(frame: CGRect(x: 20, y: (view.bounds.height - gameViewSize) / 2, width: gameViewSize, height: gameViewSize))
         gameView.backgroundColor = .lightGray
         view.addSubview(gameView)
+        
+        gameView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Constraints
+        NSLayoutConstraint.activate([
+            gameView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            gameView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            gameView.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -40),
+            gameView.heightAnchor.constraint(equalTo: gameView.widthAnchor)
+        ])
     }
 }
 
@@ -73,7 +80,7 @@ extension ViewController {
     
     func startGame() {
         score = 0
-            updateScoreLabels()
+        updateScoreLabels()
         snakeBody = [CGPoint(x: gridSize / 2, y: gridSize / 2)]
         generateFood()
         gameTimer = Timer.scheduledTimer(timeInterval: 0.25, target: self, selector: #selector(gameLoop), userInfo: nil, repeats: true)
@@ -92,7 +99,7 @@ extension ViewController {
             pauseButton.setTitle("Resume", for: .normal) // Change text to "Resume"
         }
     }
-
+    
     func generateFood() {
         var foodGenerated = false
         while !foodGenerated {
@@ -105,32 +112,32 @@ extension ViewController {
             }
         }
     }
-
+    
     @objc func gameLoop() {
         moveSnake()
         checkForCollision()
         drawGame()
         checkLevelAdvance()
     }
-
+    
     func moveSnake() {
         var newHead = snakeBody[0]
         newHead.x += currentDirection.x
         newHead.y += currentDirection.y
-
+        
         // Wrap around logic
         if newHead.x < 0 {
             newHead.x = CGFloat(gridSize - 1)
         } else if newHead.x >= CGFloat(gridSize) {
             newHead.x = 0
         }
-
+        
         if newHead.y < 0 {
             newHead.y = CGFloat(gridSize - 1)
         } else if newHead.y >= CGFloat(gridSize) {
             newHead.y = 0
         }
-
+        
         snakeBody.insert(newHead, at: 0)
         
         if newHead == foodPoint {
@@ -145,7 +152,7 @@ extension ViewController {
             snakeBody.removeLast() // Move the snake by removing the tail
         }
     }
-
+    
     func checkForCollision() {
         // Implement collision detection with walls and self
     }
@@ -154,12 +161,17 @@ extension ViewController {
 extension ViewController {
     
     func drawGame() {
-        gameView.subviews.forEach { $0.removeFromSuperview() } // Clear previous drawings
+        gameView.subviews.forEach {
+            if $0.tag != 21 {
+                $0.removeFromSuperview()
+            }
+        } // Clear previous drawings
+        
         
         drawSnake()
         drawFood()
     }
-
+    
     func drawSnake() {
         snakeBody.forEach { point in
             let snakePiece = UIView(frame: CGRect(x: point.x * CGFloat(gridSize), y: point.y * CGFloat(gridSize), width: CGFloat(gridSize), height: CGFloat(gridSize)))
@@ -167,7 +179,7 @@ extension ViewController {
             gameView.addSubview(snakePiece)
         }
     }
-
+    
     func drawFood() {
         let foodView = UIView(frame: CGRect(x: foodPoint.x * CGFloat(gridSize), y: foodPoint.y * CGFloat(gridSize), width: CGFloat(gridSize), height: CGFloat(gridSize)))
         foodView.backgroundColor = .red
@@ -180,12 +192,12 @@ extension ViewController {
         let buttonSize: CGFloat = 50
         let padding: CGFloat = 20
         let yOffset = gameView.frame.maxY + padding
-
+        
         // Directions: Up, Down, Left, Right
         let directions = ["Right", "Down", "Left", "Up"]
         let circleRadius: CGFloat = 100 / 2
         let center = view.center
-
+        
         for (index, direction) in directions.enumerated() {
             let angle: CGFloat = CGFloat(index) * (2.0 * .pi / CGFloat(directions.count))
             
@@ -213,8 +225,8 @@ extension ViewController {
         pauseButton.addTarget(self, action: #selector(togglePauseGame), for: .touchUpInside)
         view.addSubview(pauseButton)
     }
-
-
+    
+    
     @objc func changeDirection(_ sender: UIButton) {
         switch sender.tag {
         case 3: // Up
@@ -250,7 +262,7 @@ extension ViewController{
         
         updateScoreLabels()
     }
-
+    
     func updateScoreLabels() {
         scoreLabel.text = "Score: \(score)"
         highScoreLabel.text = "High Score: \(highScore)"
@@ -258,13 +270,13 @@ extension ViewController{
 }
 
 extension ViewController {
-
+    
     func checkLevelAdvance() {
         if score >= targetScoreForNextLevel {
             advanceToNextLevel()
         }
     }
-
+    
     func advanceToNextLevel() {
         currentLevel += 1
         score = 0 // Optionally reset score or keep accumulating
@@ -276,13 +288,13 @@ extension ViewController {
         gameTimer?.invalidate()
         gameTimer = Timer.scheduledTimer(timeInterval: calculateNewTimeInterval(), target: self, selector: #selector(gameLoop), userInfo: nil, repeats: true)
     }
-
+    
     func calculateNewTimeInterval() -> TimeInterval {
         // Example logic to increase speed: reduce the timer interval
         // Adjust the decrement value to suit your game's difficulty curve
         max(0.05, 0.25 - (TimeInterval(currentLevel - 1) * 0.02))
     }
-
+    
     func generateObstacles() {
         obstacles.removeAll()
         // Generate new obstacles based on current level
@@ -295,11 +307,12 @@ extension ViewController {
             obstacles.append(obstaclePoint)
         }
     }
-
+    
     func drawObstacles() {
         for obstacle in obstacles {
             let obstacleView = UIView(frame: CGRect(x: obstacle.x * CGFloat(gridSize), y: obstacle.y * CGFloat(gridSize), width: CGFloat(gridSize), height: CGFloat(gridSize)))
             obstacleView.backgroundColor = .yellow // Choose a color that stands out
+            obstacleView.tag = 21
             gameView.addSubview(obstacleView)
         }
     }
@@ -308,14 +321,14 @@ extension ViewController {
         generateObstacles()
         drawObstacles()
     }
-
+    
 }
 
 extension Timer {
     func pauseTimer() {
         self.fireDate = Date.distantFuture
     }
-
+    
     func resumeTimer() {
         self.fireDate = Date()
     }
